@@ -3,50 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>视频播放器</title>
+    <title>视频预览</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-        }
-        h1 {
-            color: white;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        .video-container {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        video {
-            width: 100%;
-            border-radius: 8px;
-            display: block;
-        }
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        video { max-width: 100%; max-height: 100%; outline: none; }
+        /* 屏蔽移动端长按弹出菜单 */
+        video { -webkit-touch-callout: none; }
     </style>
 </head>
 <body>
-    <h1>模型导入工具演示</h1>
-    <div class="video-container">
-        <video controls controlsList="nodownload">
-            <source src="Model_import_tool.mp4" type="video/mp4">
-            您的浏览器不支持视频播放。
-        </video>
-    </div>
+    <video 
+        id="player" 
+        controls 
+        controlsList="nodownload" 
+        oncontextmenu="return false;" 
+        playsinline>
+        <source src="Model_import_tool.mp4" type="video/mp4">
+        您的浏览器不支持播放该视频。
+    </video>
+
+    <script>
+        // 禁止快捷键下载 (如 Ctrl+S)
+        document.onkeydown = function(e) {
+            if (e.ctrlKey && (e.keyCode === 83 || e.keyCode === 85)) {
+                return false;
+            }
+        };
+    </script>
 </body>
 </html>
