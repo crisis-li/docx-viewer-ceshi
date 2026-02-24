@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图片镜像翻转工具</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --crust:   #11111b;
+    --mantle:  #181825;
+    --base:    #1e1e2e;
+    --surface0:#313244;
+    --surface1:#45475a;
+    --surface2:#585b70;
+    --overlay0:#6c7086;
+    --text:    #cdd6f4;
+    --subtext: #a6adc8;
+    --blue:    #89b4fa;
+    --green:   #a6e3a1;
+    --red:     #f38ba8;
+    --mauve:   #cba6f7;
+    --peach:   #fab387;
+    --teal:    #94e2d5;
+    --radius:  12px;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: 'Inter', 'Microsoft YaHei UI', sans-serif;
+    background: var(--crust);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ======== Layout ======== */
+  .app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* ---- Toolbar ---- */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--mantle);
+    border-bottom: 1px solid var(--surface0);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .toolbar .sep {
+    width: 1px;
+    height: 28px;
+    background: var(--surface1);
+    margin: 0 4px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 20px;
+    background: var(--surface0);
+    color: var(--text);
+    border: 1px solid var(--surface1);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .2s ease;
+    user-select: none;
+    font-family: inherit;
+  }
+  .btn:hover {
+    background: var(--surface1);
+    border-color: var(--blue);
+    color: var(--blue);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(137,180,250,.15);
+  }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled {
+    background: var(--base);
+    color: var(--surface1);
+    border-color: var(--surface0);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn .icon { font-size: 16px; }
+
+  /* ---- Main Area ---- */
+  .main {
+    flex: 1;
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    min-height: 0;
+  }
+  .panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .panel-title {
+    text-align: center;
+    color: var(--blue);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 6px 0;
+    flex-shrink: 0;
+  }
+  .image-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--base);
+    border: 2px dashed var(--surface1);
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    transition: border-color .25s, background .25s;
+    min-height: 0;
+  }
+  .image-container.drag-over {
+    border-color: var(--blue);
+    background: rgba(137,180,250,.06);
+  }
+  .image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .placeholder {
+    color: var(--overlay0);
+    font-size: 15px;
+    text-align: center;
+    line-height: 1.7;
+    pointer-events: none;
+  }
+  .placeholder .big-icon { font-size: 48px; display: block; margin-bottom: 8px; opacity: .6; }
+
+  /* Divider */
+  .divider {
+    width: 3px;
+    background: var(--surface0);
+    border-radius: 3px;
+    flex-shrink: 0;
+    cursor: col-resize;
+    transition: background .2s;
+  }
+  .divider:hover { background: var(--blue); }
+
+  /* ---- Status Bar ---- */
+  .statusbar {
+    padding: 7px 16px;
+    background: var(--mantle);
+    border-top: 1px solid var(--surface0);
+    color: var(--subtext);
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  /* ---- Hidden file input ---- */
+  #fileInput { display: none; }
+
+  /* ---- Toast ---- */
+  .toast {
+    position: fixed;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface0);
+    color: var(--text);
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    border: 1px solid var(--surface1);
+    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    opacity: 0;
+    transition: all .3s ease;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 700px) {
+    .main { flex-direction: column; }
+    .divider { width: auto; height: 3px; cursor: row-resize; }
+    .toolbar { gap: 6px; }
+    .btn { padding: 7px 12px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn" id="btnOpen" title="打开图片文件">
+      <span class="icon">📂</span> 打开图片
+    </button>
+    <div class="sep"></div>
+    <button class="btn" id="btnFlipH" disabled title="水平镜像翻转（左右）">
+      <span class="icon">↔</span> 水平翻转
+    </button>
+    <button class="btn" id="btnFlipV" disabled title="垂直镜像翻转（上下）">
+      <span class="icon">↕</span> 垂直翻转
+    </button>
+    <div class="sep"></div>
+    <button class="btn" id="btnReset" disabled title="恢复到原始图片">
+      <span class="icon">🔄</span> 重置
+    </button>
+    <div class="sep"></div>
+    <button class="btn" id="btnDownload" disabled title="下载翻转后的图片">
+      <span class="icon">💾</span> 下载保存
+    </button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="panel">
+      <div class="panel-title">原始图片</div>
+      <div class="image-container" id="originalContainer">
+        <div class="placeholder" id="originalPlaceholder">
+          <span class="big-icon">🖼️</span>
+          拖拽图片到此处<br>或点击 📂 打开图片
+        </div>
+        <img id="originalImg" style="display:none" alt="原始图片">
+      </div>
+    </div>
+
+    <div class="divider" id="divider"></div>
+
+    <div class="panel">
+      <div class="panel-title">翻转后图片</div>
+      <div class="image-container" id="flippedContainer">
+        <div class="placeholder" id="flippedPlaceholder">
+          <span class="big-icon">🪞</span>
+          翻转后的图片<br>将在此显示
+        </div>
+        <canvas id="flippedCanvas" style="display:none"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="statusbar" id="statusbar">就绪 — 请打开一张图片或将图片拖入窗口</div>
+</div>
+
+<!-- Hidden file input -->
+<input type="file" id="fileInput" accept="image/*">
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // DOM refs
+  const fileInput        = document.getElementById('fileInput');
+  const btnOpen          = document.getElementById('btnOpen');
+  const btnFlipH         = document.getElementById('btnFlipH');
+  const btnFlipV         = document.getElementById('btnFlipV');
+  const btnReset         = document.getElementById('btnReset');
+  const btnDownload      = document.getElementById('btnDownload');
+  const originalContainer= document.getElementById('originalContainer');
+  const originalImg      = document.getElementById('originalImg');
+  const originalPlaceholder = document.getElementById('originalPlaceholder');
+  const flippedContainer = document.getElementById('flippedContainer');
+  const flippedCanvas    = document.getElementById('flippedCanvas');
+  const flippedPlaceholder = document.getElementById('flippedPlaceholder');
+  const statusbar        = document.getElementById('statusbar');
+  const toastEl          = document.getElementById('toast');
+
+  // State
+  let originalImageData = null;  // original HTMLImageElement (never mutated)
+  let flipH = false;
+  let flipV = false;
+  let fileName = '';
+  let fileExt  = 'png';
+
+  // ——— Helpers ———
+
+  function setStatus(msg) { statusbar.textContent = msg; }
+
+  let toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+  }
+
+  function enableButtons(on) {
+    btnFlipH.disabled = !on;
+    btnFlipV.disabled = !on;
+    btnReset.disabled = !on;
+    btnDownload.disabled = !on;
+  }
+
+  // ——— Load image ———
+
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      toast('请选择有效的图片文件');
+      return;
+    }
+    fileName = file.name;
+    const dotIdx = fileName.lastIndexOf('.');
+    fileExt = dotIdx > 0 ? fileName.substring(dotIdx + 1).toLowerCase() : 'png';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        originalImageData = img;
+        flipH = false;
+        flipV = false;
+
+        // Show original
+        originalImg.src = img.src;
+        originalImg.style.display = 'block';
+        originalPlaceholder.style.display = 'none';
+
+        // Draw flipped (same as original initially)
+        drawFlipped();
+        flippedCanvas.style.display = 'block';
+        flippedPlaceholder.style.display = 'none';
+
+        enableButtons(true);
+        setStatus(`已打开: ${fileName}  |  尺寸: ${img.naturalWidth}×${img.naturalHeight}`);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ——— Draw flipped canvas ———
+
+  function drawFlipped() {
+    if (!originalImageData) return;
+    const w = originalImageData.naturalWidth;
+    const h = originalImageData.naturalHeight;
+    flippedCanvas.width  = w;
+    flippedCanvas.height = h;
+
+    // CSS sizing: fit container
+    const container = flippedContainer;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const scale = Math.min(cw / w, ch / h, 1);
+    flippedCanvas.style.width  = Math.round(w * scale) + 'px';
+    flippedCanvas.style.height = Math.round(h * scale) + 'px';
+
+    const ctx = flippedCanvas.getContext('2d');
+    ctx.save();
+    ctx.translate(flipH ? w : 0, flipV ? h : 0);
+    ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+    ctx.drawImage(originalImageData, 0, 0);
+    ctx.restore();
+  }
+
+  // Resize observer to keep canvas fitted
+  const ro = new ResizeObserver(() => { if (originalImageData) drawFlipped(); });
+  ro.observe(flippedContainer);
+
+  // ——— Button handlers ———
+
+  btnOpen.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) loadFile(e.target.files[0]);
+    e.target.value = '';  // allow re-selecting same file
+  });
+
+  btnFlipH.addEventListener('click', () => {
+    flipH = !flipH;
+    drawFlipped();
+    setStatus('已执行水平翻转（左右镜像）');
+    toast('↔ 水平翻转');
+  });
+
+  btnFlipV.addEventListener('click', () => {
+    flipV = !flipV;
+    drawFlipped();
+    setStatus('已执行垂直翻转（上下镜像）');
+    toast('↕ 垂直翻转');
+  });
+
+  btnReset.addEventListener('click', () => {
+    flipH = false;
+    flipV = false;
+    drawFlipped();
+    setStatus('已重置为原始图片');
+    toast('🔄 已重置');
+  });
+
+  btnDownload.addEventListener('click', () => {
+    if (!originalImageData) return;
+    const mimeMap = { png:'image/png', jpg:'image/jpeg', jpeg:'image/jpeg', webp:'image/webp', bmp:'image/bmp' };
+    const mime = mimeMap[fileExt] || 'image/png';
+    const ext  = (mime === 'image/jpeg') ? 'jpg' : (mime === 'image/webp' ? 'webp' : 'png');
+
+    flippedCanvas.toBlob((blob) => {
+      const a = document.createElement('a');
+      const baseName = fileName.replace(/\.[^.]+$/, '');
+      a.download = `${baseName}_flipped.${ext}`;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStatus(`已下载: ${a.download}`);
+      toast('💾 已保存');
+    }, mime, 0.95);
+  });
+
+  // ——— Drag & Drop ———
+
+  function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+  ['dragenter','dragover','dragleave','drop'].forEach(evt => {
+    document.body.addEventListener(evt, preventDefaults, false);
+  });
+
+  // Visual feedback on original container
+  ['dragenter','dragover'].forEach(evt => {
+    originalContainer.addEventListener(evt, () => originalContainer.classList.add('drag-over'));
+  });
+  ['dragleave','drop'].forEach(evt => {
+    originalContainer.addEventListener(evt, () => originalContainer.classList.remove('drag-over'));
+  });
+
+  // Also support drop on entire page
+  document.body.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    if (dt.files.length) loadFile(dt.files[0]);
+  });
+
+  // ——— Keyboard shortcuts ———
+  document.addEventListener('keydown', (e) => {
+    // Ctrl+O → Open
+    if (e.ctrlKey && e.key === 'o') { e.preventDefault(); fileInput.click(); }
+    // Ctrl+H → Flip horizontal
+    if (e.ctrlKey && e.key === 'h') { e.preventDefault(); if (!btnFlipH.disabled) btnFlipH.click(); }
+    // Ctrl+J → Flip vertical (avoid Ctrl+V conflict with paste)
+    if (e.ctrlKey && e.key === 'j') { e.preventDefault(); if (!btnFlipV.disabled) btnFlipV.click(); }
+    // Ctrl+R → Reset (prevent page reload)
+    if (e.ctrlKey && e.key === 'r') { e.preventDefault(); if (!btnReset.disabled) btnReset.click(); }
+    // Ctrl+S → Download
+    if (e.ctrlKey && e.key === 's') { e.preventDefault(); if (!btnDownload.disabled) btnDownload.click(); }
+  });
+
+  // ——— Also allow clicking the original container to open ———
+  originalContainer.addEventListener('click', (e) => {
+    if (!originalImageData) fileInput.click();
+  });
+
+})();
+</script>
+
+</body>
+</html>
