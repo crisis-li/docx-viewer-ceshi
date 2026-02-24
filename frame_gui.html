@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>静定钢架内力图 - l1/l2/l3/F 参数</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+      background-color: #f8f9fa;
+      color: #2c3e50;
+    }
+    .main {
+      display: flex;
+      padding: 15px;
+      gap: 20px;
+      min-height: 100vh;
+    }
+    .control-panel {
+      flex: 0 0 320px;
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e9ecef;
+      padding: 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+    .title-label {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #2c3e50;
+      padding: 15px;
+      background-color: #ecf0f1;
+      border-radius: 8px;
+    }
+    .param-group {
+      border: 2px solid #bdc3c7;
+      border-radius: 10px;
+      margin-top: 15px;
+      padding: 20px 15px 15px;
+      background-color: #fdfdfd;
+    }
+    .param-group-title {
+      display: block;
+      text-align: center;
+      font-weight: bold;
+      font-size: 11px;
+      color: #34495e;
+      background: white;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+      padding: 5px 15px;
+      margin: -32px auto 15px;
+      width: fit-content;
+    }
+    .param-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .param-row:last-child { margin-bottom: 0; }
+    .param-label {
+      font-weight: bold;
+      font-size: 14px;
+      color: #2c3e50;
+      flex: 0 0 140px;
+    }
+    .param-input {
+      flex: 1;
+      border: 2px solid #bdc3c7;
+      border-radius: 8px;
+      padding: 12px 15px;
+      background: white;
+      font-size: 14px;
+      font-weight: bold;
+    }
+    .param-input:focus {
+      outline: none;
+      border-color: #3498db;
+      background-color: #f8f9ff;
+    }
+    .btn-update {
+      background: linear-gradient(180deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 15px 20px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-update:hover {
+      background: linear-gradient(180deg, #5dade2, #3498db);
+    }
+    .btn-update:active {
+      background: linear-gradient(180deg, #2980b9, #1c6ea4);
+    }
+    .info-label {
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .chart-area {
+      flex: 1;
+      min-width: 0;
+      background: white;
+      border: 2px solid #bdc3c7;
+      border-radius: 10px;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+    .tabs {
+      display: flex;
+      background: linear-gradient(180deg, #ecf0f1, #d5dbdb);
+      border-bottom: 2px solid #bdc3c7;
+      padding: 0 3px 0 0;
+      gap: 3px;
+    }
+    .tab {
+      padding: 12px 25px;
+      border: 1px solid #bdc3c7;
+      border-bottom: none;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      font-weight: bold;
+      font-size: 13px;
+      color: #2c3e50;
+      cursor: pointer;
+      background: linear-gradient(180deg, #ecf0f1, #d5dbdb);
+      font-family: inherit;
+    }
+    .tab:hover { background: linear-gradient(180deg, #f8f9fa, #e9ecef); }
+    .tab.active {
+      background: linear-gradient(180deg, #3498db, #2980b9);
+      color: white;
+      border-color: #3498db;
+    }
+    .tab-panels { padding: 20px; min-height: 500px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .diagram-box {
+      width: 100%;
+      max-width: 800px;
+      height: 480px;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .result-text {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: #fafafa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 0;
+      min-height: 450px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <aside class="control-panel">
+      <div class="title-label">参数设置</div>
+      <div class="param-group">
+        <span class="param-group-title">结构参数 (l1, l2, l3 为杆长，F 为 BC 跨中集中力)</span>
+        <div class="param-row">
+          <label class="param-label">l1 (AB 长度):</label>
+          <input type="text" class="param-input" id="l1_input" value="10">
+        </div>
+        <div class="param-row">
+          <label class="param-label">l2 (BC 长度):</label>
+          <input type="text" class="param-input" id="l2_input" value="10">
+        </div>
+        <div class="param-row">
+          <label class="param-label">l3 (CD 长度):</label>
+          <input type="text" class="param-input" id="l3_input" value="10">
+        </div>
+        <div class="param-row">
+          <label class="param-label">F (集中力 kN):</label>
+          <input type="text" class="param-input" id="F_input" value="15">
+        </div>
+      </div>
+      <button type="button" class="btn-update" id="btn_update">更新并绘图</button>
+      <div class="info-label">
+        结构：AB(水平)-BC(竖直)-CD(水平)，A 铰接，D 链杆支座。<br>
+        BC 跨中集中力 F 水平向左。<br>
+        修改 l1、l2、l3、F 后点击「更新并绘图」查看各内力图。
+      </div>
+    </aside>
+    <main class="chart-area">
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="original">原图</button>
+        <button type="button" class="tab" data-tab="moment">弯矩图</button>
+        <button type="button" class="tab" data-tab="shear">剪力图</button>
+        <button type="button" class="tab" data-tab="axial">轴力图</button>
+        <button type="button" class="tab" data-tab="result">计算过程与结果</button>
+      </div>
+      <div class="tab-panels">
+        <div id="panel_original" class="tab-panel active">
+          <div class="diagram-box" id="svg_original"></div>
+        </div>
+        <div id="panel_moment" class="tab-panel">
+          <div class="diagram-box" id="svg_moment"></div>
+        </div>
+        <div id="panel_shear" class="tab-panel">
+          <div class="diagram-box" id="svg_shear"></div>
+        </div>
+        <div id="panel_axial" class="tab-panel">
+          <div class="diagram-box" id="svg_axial"></div>
+        </div>
+        <div id="panel_result" class="tab-panel">
+          <pre class="result-text" id="result_text"></pre>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const LW_FRAME = 3.5;
+    const ALPHA_FRAME = 0.8;
+    const LW_M = 0.8;
+    const COLOR_M = '#0000ff';
+    const GROUND_W = 1.2;
+    const CIRCLE_R = 0.275;
+
+    function getParams() {
+      const l1 = parseFloat(document.getElementById('l1_input').value) || 10;
+      const l2 = parseFloat(document.getElementById('l2_input').value) || 10;
+      const l3 = parseFloat(document.getElementById('l3_input').value) || 10;
+      const F = parseFloat(document.getElementById('F_input').value) || 15;
+      return { l1, l2, l3, F };
+    }
+
+    function compute(l1, l2, l3, F) {
+      const HA = F;
+      const VD = F * (l2 / 2) / (l1 + l3);
+      const VA = -VD;
+      const M_B_AB = VA * l1;
+      const M_B_BC = M_B_AB;
+      const M_E = M_B_BC + HA * (l2 / 2);
+      const M_C_BC = M_E;
+      const M_C_CD = VD * l3;
+      const FQ_AB = VA;
+      const FQ_BC_B = HA;
+      const FQ_BC_C = 0;
+      const FQ_CD = -VD;
+      const FN_AB = -HA;
+      const FN_BC = VA;
+      const FN_CD = 0;
+      const xA = 0, yA = 0, xB = l1, yB = 0, xC = l1, yC = -l2, xD = l1 + l3, yD = -l2;
+      const xE = l1, yE = -l2 / 2;
+      const wall_left_x = xA - 1.05;
+      const wall_right = xA - 0.88;
+      const ground_top_y = yA - 1.02;
+      const ground_y_A = ground_top_y - 0.15;
+      const link_bottom = yD - 0.9;
+      const ground_y_D = link_bottom - 0.15;
+      return { l1, l2, l3, F, HA, VA, VD, M_B_AB, M_B_BC, M_E, M_C_BC, M_C_CD, FQ_AB, FQ_BC_B, FQ_BC_C, FQ_CD, FN_AB, FN_BC, FN_CD, xA, yA, xB, yB, xC, yC, xD, yD, xE, yE, wall_left_x, wall_right, ground_top_y, ground_y_A, link_bottom, ground_y_D };
+    }
+
+    function makeView(container, xMin, xMax, yMin, yMax) {
+      const w = container.clientWidth || 760;
+      const h = container.clientHeight || 440;
+      const margin = 50;
+      const rangeX = xMax - xMin;
+      const rangeY = yMax - yMin;
+      const scale = Math.min((w - 2 * margin) / rangeX, (h - 2 * margin) / rangeY);
+      const ox = margin + (w - 2 * margin) / 2 - (xMin + xMax) / 2 * scale;
+      const oy = margin + (h - 2 * margin) / 2 + (yMin + yMax) / 2 * scale;
+      const toS = (x, y) => [ox + x * scale, oy - y * scale];
+      return { w, h, margin, scale, ox, oy, toS };
+    }
+
+    function buildResultText(data) {
+      const { l1, l2, l3, F, HA, VA, VD, M_B_AB, M_B_BC, M_E, M_C_BC, M_C_CD, FQ_AB, FQ_BC_B, FQ_CD, FN_AB, FN_BC, FN_CD } = data;
+      const fmt = (x) => Number(x).toFixed(4);
+      let t = [];
+      t.push('静定钢架内力计算过程与结果（截面法）');
+      t.push('='.repeat(56));
+      t.push('结构：AB(水平) - BC(竖直) - CD(水平)，A 铰接，D 链杆支座；BC 跨中集中力 F。');
+      t.push('');
+      t.push('一、支反力（整体平衡）');
+      t.push('-'.repeat(56));
+      t.push('  ΣFx = 0:  HA - F = 0   =>  HA = F');
+      t.push(`         HA = ${F} = ${fmt(HA)} kN`);
+      t.push('  ΣFy = 0:  VA + VD = 0   =>  VA = -VD');
+      t.push('  ΣMA = 0:  VD·(l1+l3) - F·(l2/2) = 0  =>  VD = F·(l2/2)/(l1+l3)');
+      t.push(`         VD = ${F}×(${l2}/2)/(${l1}+${l3}) = ${fmt(VD)} kN`);
+      t.push(`         VA = -VD = ${fmt(VA)} kN`);
+      t.push(`  校核: ΣFx = HA - F = ${HA - F};  ΣFy = VA + VD = ${VA + VD}`);
+      t.push('');
+      t.push('二、弯矩图 M（画在受拉侧，单位 kN·m）');
+      t.push('-'.repeat(56));
+      t.push('  AB 段 (水平 A→B，长 l1):  A 铰弯矩为 0，B 端弯矩 M_B_AB = VA·l1');
+      t.push(`    M_A = 0,  M_B_AB = VA·l1 = ${fmt(VA)}×${l1} = ${fmt(M_B_AB)}`);
+      t.push('  BC 段 (竖直 B→C，长 l2):  刚结点 B 处 M_B_BC = M_B_AB；跨中 E 有集中力 F，弯矩线性变化');
+      t.push(`    M_B_BC = M_B_AB = ${fmt(M_B_BC)}`);
+      t.push(`    M_E = M_B_BC + HA·(l2/2) = ${fmt(M_B_BC)} + ${fmt(HA)}×(${l2}/2) = ${fmt(M_E)}`);
+      t.push(`    M_C_BC = M_E = ${fmt(M_C_BC)}`);
+      t.push('  CD 段 (水平 C→D，长 l3):  C 端弯矩 M_C_CD = VD·l3，D 铰弯矩为 0');
+      t.push(`    M_C_CD = VD·l3 = ${fmt(VD)}×${l3} = ${fmt(M_C_CD)},  M_D = 0`);
+      t.push('  弯矩图计算结果:');
+      t.push(`    M_A=0,  M_B_AB=M_B_BC=${fmt(M_B_AB)},  M_E=${fmt(M_E)},  M_C_BC=${fmt(M_C_BC)},  M_C_CD=${fmt(M_C_CD)},  M_D=0`);
+      t.push('');
+      t.push('三、剪力图 FQ（单位 kN，绕截面顺时针为正）');
+      t.push('-'.repeat(56));
+      t.push('  AB 段: 取 A 以右截面，左段竖向平衡  FQ_AB = VA');
+      t.push(`    FQ_AB = VA = ${fmt(FQ_AB)}`);
+      t.push('  BC 段: B 端 FQ=HA；跨中 E 有 F 向左，E 右侧 FQ=0');
+      t.push(`    B→E: FQ = HA = ${fmt(FQ_BC_B)};  E→C: FQ = 0`);
+      t.push('  CD 段: 取 D 以左截面，右段竖向平衡  FQ_CD = -VD');
+      t.push(`    FQ_CD = -VD = ${fmt(FQ_CD)}`);
+      t.push('  剪力图计算结果:');
+      t.push(`    AB: FQ=${fmt(FQ_AB)};  BC: B→E FQ=${fmt(FQ_BC_B)}, E→C FQ=0;  CD: FQ=${fmt(FQ_CD)}`);
+      t.push('');
+      t.push('四、轴力图 FN（单位 kN，拉为正、压为负）');
+      t.push('-'.repeat(56));
+      t.push('  AB 段: 取 A 以右截面，左段水平平衡  FN_AB = -HA（杆受压）');
+      t.push(`    FN_AB = -HA = ${fmt(FN_AB)}`);
+      t.push('  BC 段: 左段在 B 对 BC 施加竖向力 VA，沿杆向下  FN_BC = VA');
+      t.push(`    FN_BC = VA = ${fmt(FN_BC)}`);
+      t.push('  CD 段: 无轴力');
+      t.push('    FN_CD = 0');
+      t.push('  轴力图计算结果:');
+      t.push(`    AB: FN=${fmt(FN_AB)} (压);  BC: FN=${fmt(FN_BC)} (压);  CD: FN=${fmt(FN_CD)}`);
+      t.push('');
+      t.push('='.repeat(56));
+      return t.join('\n');
+    }
+
+    function polygonPath(poly, toS) {
+      if (!poly.length) return '';
+      let d = 'M ' + toS(poly[0][0], poly[0][1]).join(',') + ' ';
+      for (let i = 1; i < poly.length; i++) d += 'L ' + toS(poly[i][0], poly[i][1]).join(',') + ' ';
+      return d + 'Z';
+    }
+
+    const HATCH_SPACING = 0.18;
+    const HATCH_LW = 0.6;
+
+    function addPolygonHatch(poly, toS, direction, clipId) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (let i = 0; i < poly.length; i++) {
+        const x = poly[i][0], y = poly[i][1];
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+      const dPath = polygonPath(poly, toS);
+      let s = '<defs><clipPath id="' + clipId + '"><path d="' + dPath + '"/></clipPath></defs><g clip-path="url(#' + clipId + ')">';
+      if (direction === 'vertical') {
+        for (let x = minX; x <= maxX + 0.001; x += HATCH_SPACING) {
+          const [sx1, sy1] = toS(x, minY);
+          const [sx2, sy2] = toS(x, maxY);
+          s += '<line x1="' + sx1 + '" y1="' + sy1 + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="' + COLOR_M + '" stroke-width="' + HATCH_LW + '"/>';
+        }
+      } else {
+        for (let y = minY; y <= maxY + 0.001; y += HATCH_SPACING) {
+          const [sx1, sy1] = toS(minX, y);
+          const [sx2, sy2] = toS(maxX, y);
+          s += '<line x1="' + sx1 + '" y1="' + sy1 + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="' + COLOR_M + '" stroke-width="' + HATCH_LW + '"/>';
+        }
+      }
+      s += '</g>';
+      return s;
+    }
+
+    function addGroundLine(x, y, w, toS) {
+      let s = '';
+      const hw = w / 2;
+      const [x1, y1] = toS(x - hw, y);
+      const [x2, y2] = toS(x + hw, y);
+      s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#000" stroke-width="2.5"/>';
+      for (let i = 0; i <= 5; i++) {
+        const xi = x - hw + i * (w / 5);
+        const [sx, sy] = toS(xi, y);
+        const [sx2, sy2] = toS(xi, y - 0.25);
+        s += '<line x1="' + sx + '" y1="' + sy + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="#000" stroke-width="1"/>';
+      }
+      for (let i = 0; i <= 5; i++) {
+        const xi = x - hw + i * (w / 5);
+        const xinext = xi + (w / 5) * 0.5;
+        const [sx, sy] = toS(xi, y - 0.25);
+        const [sx2, sy2] = toS(xinext, y);
+        s += '<line x1="' + sx + '" y1="' + sy + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="#000" stroke-width="0.8" opacity="0.7"/>';
+      }
+      return s;
+    }
+
+    function addWallLine(x, yBottom, yTop, toS) {
+      let s = '';
+      const [sx1, sy1] = toS(x, yBottom);
+      const [sx2, sy2] = toS(x, yTop);
+      s += '<line x1="' + sx1 + '" y1="' + sy1 + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="#000" stroke-width="2.5"/>';
+      for (let i = 0; i <= 5; i++) {
+        const yi = yBottom + i * ((yTop - yBottom) / 5);
+        const [sx, sy] = toS(x - 0.25, yi);
+        const [sx2, sy2] = toS(x, yi);
+        s += '<line x1="' + sx + '" y1="' + sy + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="#000" stroke-width="1"/>';
+      }
+      for (let i = 0; i <= 5; i++) {
+        const yi = yBottom + i * ((yTop - yBottom) / 5);
+        const yinext = yi + (yTop - yBottom) / 5 * 0.5;
+        const [sx, sy] = toS(x - 0.25, yinext);
+        const [sx2, sy2] = toS(x, yi);
+        s += '<line x1="' + sx + '" y1="' + sy + '" x2="' + sx2 + '" y2="' + sy2 + '" stroke="#000" stroke-width="0.8" opacity="0.7"/>';
+      }
+      return s;
+    }
+
+    function addSupportA(data, toS) {
+      let html = '';
+      const { xA, yA, wall_left_x, wall_right, ground_top_y, ground_y_A } = data;
+      html += addWallLine(wall_left_x, yA - 1.55, yA + 0.35, toS);
+      html += addGroundLine(xA, ground_y_A, GROUND_W, toS);
+      const lw = Math.max(1, LW_FRAME * 0.5);
+      html += '<line x1="' + toS(wall_right, yA)[0] + '" y1="' + toS(wall_right, yA)[1] + '" x2="' + toS(xA, yA)[0] + '" y2="' + toS(xA, yA)[1] + '" stroke="#000" stroke-width="' + lw + '" opacity="' + ALPHA_FRAME + '"/>';
+      html += '<line x1="' + toS(xA, ground_top_y)[0] + '" y1="' + toS(xA, ground_top_y)[1] + '" x2="' + toS(xA, yA)[0] + '" y2="' + toS(xA, yA)[1] + '" stroke="#000" stroke-width="' + lw + '" opacity="' + ALPHA_FRAME + '"/>';
+      [[wall_right, yA], [xA, yA], [xA, ground_top_y]].forEach(([cx, cy]) => {
+        const [sx, sy] = toS(cx, cy);
+        const r = Math.max(3, CIRCLE_R * (data.scale || 1));
+        html += '<circle cx="' + sx + '" cy="' + sy + '" r="' + r + '" fill="white" stroke="#000" stroke-width="1.2"/>';
+      });
+      return html;
+    }
+
+    function addSupportD(data, toS) {
+      let html = '';
+      const { xD, yD, link_bottom, ground_y_D } = data;
+      const lw = Math.max(1, LW_FRAME * 0.5);
+      html += '<line x1="' + toS(xD, link_bottom)[0] + '" y1="' + toS(xD, link_bottom)[1] + '" x2="' + toS(xD, yD)[0] + '" y2="' + toS(xD, yD)[1] + '" stroke="#000" stroke-width="' + lw + '" opacity="' + ALPHA_FRAME + '"/>';
+      [[xD, yD], [xD, link_bottom]].forEach(([cx, cy]) => {
+        const [sx, sy] = toS(cx, cy);
+        const r = Math.max(3, CIRCLE_R * (data.scale || 1));
+        html += '<circle cx="' + sx + '" cy="' + sy + '" r="' + r + '" fill="white" stroke="#000" stroke-width="1.2"/>';
+      });
+      html += addGroundLine(xD, ground_y_D, GROUND_W, toS);
+      return html;
+    }
+
+    function drawOriginal(container, data) {
+      const { xA, yA, xB, yB, xC, yC, xD, yD, xE, yE, F, l1, l2, l3 } = data;
+      const xMin = xA - 2.5, xMax = xD + 2.5, yMin = yC - 1.5, yMax = yA + 1.5;
+      const v = makeView(container, xMin, xMax, yMin, yMax);
+      const toS = v.toS;
+      data.scale = v.scale;
+      let html = '<svg width="100%" height="100%" viewBox="0 0 ' + v.w + ' ' + v.h + '" preserveAspectRatio="xMidYMid meet"><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#000"/></marker></defs>';
+      const lw = Math.max(1.5, LW_FRAME * 0.5);
+      html += '<path d="M ' + toS(xA, yA)[0] + ',' + toS(xA, yA)[1] + ' L ' + toS(xB, yB)[0] + ',' + toS(xB, yB)[1] + ' L ' + toS(xC, yC)[0] + ',' + toS(xC, yC)[1] + ' L ' + toS(xD, yD)[0] + ',' + toS(xD, yD)[1] + '" fill="none" stroke="#000" stroke-width="' + lw + '" opacity="' + ALPHA_FRAME + '"/>';
+      html += '<text x="' + toS(xA - 0.75, yA + 0.55)[0] + '" y="' + toS(xA - 0.75, yA + 0.55)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">A</text>';
+      html += '<text x="' + toS(xB + 0.5, yB + 0.65)[0] + '" y="' + toS(xB + 0.5, yB + 0.65)[1] + '" text-anchor="middle" dominant-baseline="auto" font-size="16" font-weight="bold" fill="#2c3e50">B</text>';
+      html += '<text x="' + toS(xC - 0.5, yC - 0.65)[0] + '" y="' + toS(xC - 0.5, yC - 0.65)[1] + '" text-anchor="middle" dominant-baseline="hanging" font-size="16" font-weight="bold" fill="#2c3e50">C</text>';
+      html += '<text x="' + toS(xD + 0.75, yD - 0.55)[0] + '" y="' + toS(xD + 0.75, yD - 0.55)[1] + '" text-anchor="start" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">D</text>';
+      html += addSupportA(data, toS);
+      html += addSupportD(data, toS);
+      html += '<line x1="' + toS(xE, yE)[0] + '" y1="' + toS(xE, yE)[1] + '" x2="' + toS(xE - 1.5, yE)[0] + '" y2="' + toS(xE - 1.5, yE)[1] + '" stroke="#000" stroke-width="2" marker-end="url(#arrow)"/>';
+      html += '<text x="' + toS(xE - 1.8, yE)[0] + '" y="' + toS(xE - 1.8, yE)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="11" fill="#2c3e50">F=' + F + '</text>';
+      html += '<text x="' + toS((xA + xB) / 2, (yA + yB) / 2 + 0.6)[0] + '" y="' + toS((xA + xB) / 2, (yA + yB) / 2 + 0.6)[1] + '" text-anchor="middle" font-size="11" fill="#2c3e50">l1=' + l1 + '</text>';
+      html += '<text x="' + toS(xB + 0.6, (yB + yC) / 2)[0] + '" y="' + toS(xB + 0.6, (yB + yC) / 2)[1] + '" text-anchor="start" dominant-baseline="middle" font-size="11" fill="#2c3e50">l2=' + l2 + '</text>';
+      html += '<text x="' + toS((xC + xD) / 2, yC - 1.1)[0] + '" y="' + toS((xC + xD) / 2, yC - 1.1)[1] + '" text-anchor="middle" font-size="11" fill="#2c3e50">l3=' + l3 + '</text>';
+      html += '</svg>';
+      container.innerHTML = html;
+    }
+
+    function drawMoment(container, data) {
+      const { xA, yA, xB, yB, xC, yC, xD, yD, xE, yE, l1, l2, l3, M_B_AB, M_B_BC, M_E, M_C_BC, M_C_CD } = data;
+      const max_M = Math.max(Math.abs(M_B_AB), Math.abs(M_E), Math.abs(M_C_BC), Math.abs(M_C_CD), 1);
+      const frame_span = Math.min(l1, l2, l3);
+      let scale_M = (0.5 * frame_span) / max_M;
+      scale_M = Math.min(scale_M, 0.25);
+      scale_M = Math.max(scale_M, 0.03);
+      const max_off = scale_M * max_M;
+      const margin = 1.8;
+      const xMin = xA - margin, xMax = xD + margin, yMin = yC - max_off - margin, yMax = yA + max_off + margin;
+      const v = makeView(container, xMin, xMax, yMin, yMax);
+      const toS = v.toS;
+      data.scale = v.scale;
+      const off_AB = scale_M * Math.abs(M_B_AB);
+      const off_B = scale_M * Math.abs(M_B_BC);
+      const off_E = scale_M * Math.abs(M_E);
+      const off_C = scale_M * Math.abs(M_C_BC);
+      const off_CD = scale_M * Math.abs(M_C_CD);
+      const polyAB = [[xA, yA], [xB, yB], [xB, yB + off_AB]];
+      const polyBC = [[xB, yB], [xE, yE], [xC, yC], [xC - off_C, yC], [xE - off_E, yE], [xB + off_B, yB]];
+      const polyCD = [[xC, yC], [xD, yD], [xD, yD - off_CD], [xC, yC - off_CD]];
+      let html = '<svg width="100%" height="100%" viewBox="0 0 ' + v.w + ' ' + v.h + '" preserveAspectRatio="xMidYMid meet">';
+      const lw = Math.max(1.5, LW_FRAME * 0.5);
+      html += '<path d="M ' + toS(xA, yA)[0] + ',' + toS(xA, yA)[1] + ' L ' + toS(xB, yB)[0] + ',' + toS(xB, yB)[1] + ' L ' + toS(xC, yC)[0] + ',' + toS(xC, yC)[1] + ' L ' + toS(xD, yD)[0] + ',' + toS(xD, yD)[1] + '" fill="none" stroke="#000" stroke-width="' + lw + '" opacity="' + ALPHA_FRAME + '"/>';
+      html += '<path d="' + polygonPath(polyAB, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyAB, toS, 'vertical', 'clipMAB');
+      html += '<path d="' + polygonPath(polyBC, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyBC, toS, 'horizontal', 'clipMBC');
+      html += '<path d="' + polygonPath(polyCD, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyCD, toS, 'vertical', 'clipMCD');
+      html += '<line x1="' + toS(xA, yA)[0] + '" y1="' + toS(xA, yA)[1] + '" x2="' + toS(xB, yB + off_AB)[0] + '" y2="' + toS(xB, yB + off_AB)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<line x1="' + toS(xB + off_B, yB)[0] + '" y1="' + toS(xB + off_B, yB)[1] + '" x2="' + toS(xE - off_E, yE)[0] + '" y2="' + toS(xE - off_E, yE)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<line x1="' + toS(xE - off_E, yE)[0] + '" y1="' + toS(xE - off_E, yE)[1] + '" x2="' + toS(xC - off_C, yC)[0] + '" y2="' + toS(xC - off_C, yC)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<line x1="' + toS(xC, yC - off_CD)[0] + '" y1="' + toS(xC, yC - off_CD)[1] + '" x2="' + toS(xD, yD - off_CD)[0] + '" y2="' + toS(xD, yD - off_CD)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<text x="' + toS((xA + xB) / 2 + 6, (yA + yB + off_AB) / 2 + 0.85)[0] + '" y="' + toS((xA + xB) / 2 + 6, (yA + yB + off_AB) / 2 + 0.85)[1] + '" text-anchor="middle" font-size="9" fill="' + COLOR_M + '">' + Math.abs(M_B_AB).toFixed(1) + '</text>';
+      html += '<text x="' + toS(xB + off_B - 1.0, yB + 0.5)[0] + '" y="' + toS(xB + off_B - 1.0, yB + 0.5)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="9" fill="' + COLOR_M + '">' + Math.abs(M_B_BC).toFixed(1) + '</text>';
+      html += '<text x="' + toS(xE - off_E - 1.0, yE)[0] + '" y="' + toS(xE - off_E - 1.0, yE)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="9" fill="' + COLOR_M + '">' + Math.abs(M_E).toFixed(1) + '</text>';
+      html += '<text x="' + toS(xC - off_C - 1.0, yC)[0] + '" y="' + toS(xC - off_C - 1.0, yC)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="9" fill="' + COLOR_M + '">' + Math.abs(M_C_BC).toFixed(1) + '</text>';
+      html += '<text x="' + toS((xC + xD) / 2, yC - off_CD - 0.9)[0] + '" y="' + toS((xC + xD) / 2, yC - off_CD - 0.9)[1] + '" text-anchor="middle" font-size="9" fill="' + COLOR_M + '">' + Math.abs(M_C_CD).toFixed(1) + '</text>';
+      html += '<text x="' + toS(xA - 0.75, yA + 0.55)[0] + '" y="' + toS(xA - 0.75, yA + 0.55)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">A</text>';
+      html += '<text x="' + toS(xB + 0.5, yB + 0.65)[0] + '" y="' + toS(xB + 0.5, yB + 0.65)[1] + '" text-anchor="middle" dominant-baseline="auto" font-size="16" font-weight="bold" fill="#2c3e50">B</text>';
+      html += '<text x="' + toS(xC - 0.5, yC - 0.65)[0] + '" y="' + toS(xC - 0.5, yC - 0.65)[1] + '" text-anchor="middle" dominant-baseline="hanging" font-size="16" font-weight="bold" fill="#2c3e50">C</text>';
+      html += '<text x="' + toS(xD + 0.75, yD - 0.55)[0] + '" y="' + toS(xD + 0.75, yD - 0.55)[1] + '" text-anchor="start" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">D</text>';
+      html += addSupportA(data, toS);
+      html += addSupportD(data, toS);
+      html += '<text x="' + (v.w / 2 - 90) + '" y="22" font-size="18" font-weight="bold" fill="#2c3e50">弯矩图 M (单位 kN·m)</text>';
+      html += '</svg>';
+      container.innerHTML = html;
+    }
+
+    function drawShear(container, data) {
+      const { xA, yA, xB, yB, xC, yC, xD, yD, xE, yE, FQ_AB, FQ_BC_B, FQ_BC_C, FQ_CD } = data;
+      const xMin = xA - 2.5, xMax = xD + 2.5, yMin = yC - 1.5, yMax = yA + 1.5;
+      const v = makeView(container, xMin, xMax, yMin, yMax);
+      const toS = v.toS;
+      data.scale = v.scale;
+      const scale_Q = 0.12;
+      const dyAB = scale_Q * FQ_AB;
+      const dx_BE = scale_Q * FQ_BC_B;
+      const dx_EC = scale_Q * FQ_BC_C;
+      const dyCD = scale_Q * FQ_CD;
+      const polyQAB = [[xA, yA], [xB, yB], [xB, yB + dyAB], [xA, yA + dyAB]];
+      const polyQBC = [[xB, yB], [xE, yE], [xE + dx_BE, yE], [xB + dx_BE, yB]];
+      const polyQCD = [[xC, yC], [xD, yD], [xD, yD + dyCD], [xC, yC + dyCD]];
+      let html = '<svg width="100%" height="100%" viewBox="0 0 ' + v.w + ' ' + v.h + '" preserveAspectRatio="xMidYMid meet">';
+      const lw = Math.max(1.5, LW_FRAME * 0.5);
+      html += '<path d="M ' + toS(xA, yA)[0] + ',' + toS(xA, yA)[1] + ' L ' + toS(xB, yB)[0] + ',' + toS(xB, yB)[1] + ' L ' + toS(xC, yC)[0] + ',' + toS(xC, yC)[1] + ' L ' + toS(xD, yD)[0] + ',' + toS(xD, yD)[1] + '" fill="none" stroke="#000" stroke-width="' + lw + '" opacity="' + ALPHA_FRAME + '"/>';
+      html += '<path d="' + polygonPath(polyQAB, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyQAB, toS, 'vertical', 'clipQAB');
+      html += '<line x1="' + toS(xA, yA + dyAB)[0] + '" y1="' + toS(xA, yA + dyAB)[1] + '" x2="' + toS(xB, yB + dyAB)[0] + '" y2="' + toS(xB, yB + dyAB)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<path d="' + polygonPath(polyQBC, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyQBC, toS, 'horizontal', 'clipQBC');
+      html += '<line x1="' + toS(xB + dx_BE, yB)[0] + '" y1="' + toS(xB + dx_BE, yB)[1] + '" x2="' + toS(xE + dx_BE, yE)[0] + '" y2="' + toS(xE + dx_BE, yE)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<line x1="' + toS(xE + dx_EC, yE)[0] + '" y1="' + toS(xE + dx_EC, yE)[1] + '" x2="' + toS(xC + dx_EC, yC)[0] + '" y2="' + toS(xC + dx_EC, yC)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<path d="' + polygonPath(polyQCD, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyQCD, toS, 'vertical', 'clipQCD');
+      html += '<line x1="' + toS(xC, yC + dyCD)[0] + '" y1="' + toS(xC, yC + dyCD)[1] + '" x2="' + toS(xD, yD + dyCD)[0] + '" y2="' + toS(xD, yD + dyCD)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      const labAB_y = (yA + yB) / 2 + dyAB + (FQ_AB >= 0 ? 0.85 : -0.85);
+      html += '<text x="' + toS((xA + xB) / 2, labAB_y)[0] + '" y="' + toS((xA + xB) / 2, labAB_y)[1] + '" text-anchor="middle" font-size="10" fill="' + COLOR_M + '">' + (FQ_AB >= 0 ? '+' : '') + FQ_AB.toFixed(2) + '</text>';
+      html += '<text x="' + toS(xE + dx_BE + 1.0, (yB + yE) / 2)[0] + '" y="' + toS(xE + dx_BE + 1.0, (yB + yE) / 2)[1] + '" text-anchor="start" dominant-baseline="middle" font-size="10" fill="' + COLOR_M + '">' + (FQ_BC_B >= 0 ? '+' : '') + FQ_BC_B.toFixed(2) + '</text>';
+      html += '<text x="' + toS(xE + 1.0, (yE + yC) / 2)[0] + '" y="' + toS(xE + 1.0, (yE + yC) / 2)[1] + '" text-anchor="start" dominant-baseline="middle" font-size="10" fill="' + COLOR_M + '">0.00</text>';
+      const labCD_y = (yC + yD) / 2 + dyCD + (FQ_CD < 0 ? -0.85 : 0.85);
+      html += '<text x="' + toS((xC + xD) / 2, labCD_y)[0] + '" y="' + toS((xC + xD) / 2, labCD_y)[1] + '" text-anchor="middle" font-size="10" fill="' + COLOR_M + '">' + (FQ_CD >= 0 ? '+' : '') + FQ_CD.toFixed(2) + '</text>';
+      html += '<text x="' + toS(xA - 0.75, yA + 0.55)[0] + '" y="' + toS(xA - 0.75, yA + 0.55)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">A</text>';
+      html += '<text x="' + toS(xB + 0.5, yB + 0.65)[0] + '" y="' + toS(xB + 0.5, yB + 0.65)[1] + '" text-anchor="middle" dominant-baseline="auto" font-size="16" font-weight="bold" fill="#2c3e50">B</text>';
+      html += '<text x="' + toS(xC - 0.5, yC - 0.65)[0] + '" y="' + toS(xC - 0.5, yC - 0.65)[1] + '" text-anchor="middle" dominant-baseline="hanging" font-size="16" font-weight="bold" fill="#2c3e50">C</text>';
+      html += '<text x="' + toS(xD + 0.75, yD - 0.55)[0] + '" y="' + toS(xD + 0.75, yD - 0.55)[1] + '" text-anchor="start" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">D</text>';
+      html += addSupportA(data, toS);
+      html += addSupportD(data, toS);
+      html += '<text x="' + (v.w / 2 - 70) + '" y="22" font-size="18" font-weight="bold" fill="#2c3e50">剪力图 FQ (单位 kN)</text>';
+      html += '</svg>';
+      container.innerHTML = html;
+    }
+
+    function drawAxial(container, data) {
+      const { xA, yA, xB, yB, xC, yC, xD, yD, FN_AB, FN_BC } = data;
+      const xMin = xA - 2.5, xMax = xD + 2.5, yMin = yC - 1.5, yMax = yA + 1.5;
+      const v = makeView(container, xMin, xMax, yMin, yMax);
+      const toS = v.toS;
+      data.scale = v.scale;
+      const scale_N = 0.12;
+      const dyAB = scale_N * FN_AB;
+      const dxBC = scale_N * FN_BC;
+      const polyNAB = [[xA, yA], [xB, yB], [xB, yB + dyAB], [xA, yA + dyAB]];
+      const polyNBC = [[xB, yB], [xC, yC], [xC + dxBC, yC], [xB + dxBC, yB]];
+      let html = '<svg width="100%" height="100%" viewBox="0 0 ' + v.w + ' ' + v.h + '" preserveAspectRatio="xMidYMid meet">';
+      const lw = Math.max(1.5, LW_FRAME * 0.5);
+      html += '<path d="M ' + toS(xA, yA)[0] + ',' + toS(xA, yA)[1] + ' L ' + toS(xB, yB)[0] + ',' + toS(xB, yB)[1] + ' L ' + toS(xC, yC)[0] + ',' + toS(xC, yC)[1] + ' L ' + toS(xD, yD)[0] + ',' + toS(xD, yD)[1] + '" fill="none" stroke="#000" stroke-width="' + lw + '" opacity="' + ALPHA_FRAME + '"/>';
+      html += '<path d="' + polygonPath(polyNAB, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyNAB, toS, 'vertical', 'clipNAB');
+      html += '<line x1="' + toS(xA, yA + dyAB)[0] + '" y1="' + toS(xA, yA + dyAB)[1] + '" x2="' + toS(xB, yB + dyAB)[0] + '" y2="' + toS(xB, yB + dyAB)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<path d="' + polygonPath(polyNBC, toS) + '" fill="white" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += addPolygonHatch(polyNBC, toS, 'horizontal', 'clipNBC');
+      html += '<line x1="' + toS(xB + dxBC, yB)[0] + '" y1="' + toS(xB + dxBC, yB)[1] + '" x2="' + toS(xC + dxBC, yC)[0] + '" y2="' + toS(xC + dxBC, yC)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      html += '<line x1="' + toS(xC, yC)[0] + '" y1="' + toS(xC, yC)[1] + '" x2="' + toS(xD, yD)[0] + '" y2="' + toS(xD, yD)[1] + '" stroke="' + COLOR_M + '" stroke-width="' + LW_M + '"/>';
+      const labAB_y = (yA + yB) / 2 + dyAB + (FN_AB >= 0 ? 0.85 : -0.85);
+      html += '<text x="' + toS((xA + xB) / 2, labAB_y)[0] + '" y="' + toS((xA + xB) / 2, labAB_y)[1] + '" text-anchor="middle" font-size="10" fill="' + COLOR_M + '">' + (FN_AB >= 0 ? '+' : '') + FN_AB.toFixed(2) + '</text>';
+      const labBC_x = xB + dxBC + (FN_BC >= 0 ? 1.0 : -1.0);
+      html += '<text x="' + toS(labBC_x, (yB + yC) / 2)[0] + '" y="' + toS(labBC_x, (yB + yC) / 2)[1] + '" text-anchor="' + (FN_BC >= 0 ? 'start' : 'end') + '" dominant-baseline="middle" font-size="10" fill="' + COLOR_M + '">' + (FN_BC >= 0 ? '+' : '') + FN_BC.toFixed(2) + '</text>';
+      html += '<text x="' + toS((xC + xD) / 2, yC + 0.7)[0] + '" y="' + toS((xC + xD) / 2, yC + 0.7)[1] + '" text-anchor="middle" font-size="10" fill="' + COLOR_M + '">0.00</text>';
+      html += '<text x="' + toS(xA - 0.75, yA + 0.55)[0] + '" y="' + toS(xA - 0.75, yA + 0.55)[1] + '" text-anchor="end" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">A</text>';
+      html += '<text x="' + toS(xB + 0.5, yB + 0.65)[0] + '" y="' + toS(xB + 0.5, yB + 0.65)[1] + '" text-anchor="middle" dominant-baseline="auto" font-size="16" font-weight="bold" fill="#2c3e50">B</text>';
+      html += '<text x="' + toS(xC - 0.5, yC - 0.65)[0] + '" y="' + toS(xC - 0.5, yC - 0.65)[1] + '" text-anchor="middle" dominant-baseline="hanging" font-size="16" font-weight="bold" fill="#2c3e50">C</text>';
+      html += '<text x="' + toS(xD + 0.75, yD - 0.55)[0] + '" y="' + toS(xD + 0.75, yD - 0.55)[1] + '" text-anchor="start" dominant-baseline="middle" font-size="16" font-weight="bold" fill="#2c3e50">D</text>';
+      html += addSupportA(data, toS);
+      html += addSupportD(data, toS);
+      html += '<text x="' + (v.w / 2 - 70) + '" y="22" font-size="18" font-weight="bold" fill="#2c3e50">轴力图 FN (单位 kN)</text>';
+      html += '</svg>';
+      container.innerHTML = html;
+    }
+
+    function updateAll() {
+      const params = getParams();
+      const data = compute(params.l1, params.l2, params.l3, params.F);
+      document.getElementById('result_text').textContent = buildResultText(data);
+      drawOriginal(document.getElementById('svg_original'), data);
+      drawMoment(document.getElementById('svg_moment'), data);
+      drawShear(document.getElementById('svg_shear'), data);
+      drawAxial(document.getElementById('svg_axial'), data);
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('panel_' + this.dataset.tab).classList.add('active');
+      });
+    });
+    document.getElementById('btn_update').addEventListener('click', updateAll);
+    updateAll();
+  </script>
+</body>
+</html>
